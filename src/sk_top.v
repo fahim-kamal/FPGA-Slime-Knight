@@ -37,8 +37,7 @@ module sk_top(
 
     // level
     wire displayBlockType;
-    level lvl(.clk(ClkPort),
-              .x1(hc),
+    level lvl(.x1(hc),
               .y1(vc),
               .data1(displayBlockType),
               .x2(colX),
