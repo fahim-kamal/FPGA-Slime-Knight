@@ -2,8 +2,8 @@
 
 parameter ROW_MAX = 14;
 parameter COL_MAX = 19;
-parameter LEFT = 143;
-parameter TOP = 34;
+parameter LEFT = 144;
+parameter TOP = 35;
 
 module set_ptr (
         input [9:0] x, y,
@@ -15,7 +15,7 @@ module set_ptr (
 
     assign valid = (row_ptr >= 0 && row_ptr <= ROW_MAX) &&
            (col_ptr >= 0 && col_ptr <= COL_MAX);
-endmodule;
+endmodule
 
 module level(
         // pins for display

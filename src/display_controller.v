@@ -47,8 +47,8 @@ module display_controller(
             rgb = BLACK;
         else if (PLAYER_ZONE) begin
             rgb = RAND;
-            if (playerCol == 4'b1111)
-                rgb = GREEN;
+            // if (playerCol == 4'b1111)
+            //     rgb = GREEN;
         end
         else if (blockType == 0)
             rgb = 12'b1111_0000_0000;
