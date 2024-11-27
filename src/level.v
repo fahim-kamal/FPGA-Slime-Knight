@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-parameter ROW_MAX = 15;
+parameter ROW_MAX = 14;
 parameter COL_MAX = 19;
 parameter LEFT = 143;
 parameter TOP = 34;
@@ -28,7 +28,7 @@ module level(
         input [9:0] y2,
         output data2
     );
-    reg [COL_MAX:0] level [ROW_MAX:0];
+    reg [0:COL_MAX] level [ROW_MAX:0];
 
     initial begin
         $readmemb("lvl1.mem", level);

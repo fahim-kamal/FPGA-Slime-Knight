@@ -22,10 +22,10 @@ module player(
 
     always @(posedge sim_clk) begin
         xPos <= xPos + xSpeed;
-        if (playerCol == 4'b1111) begin
-            xSpeed <= 0;
-            xPos <= xPos - 1;
-        end
+        // if (playerCol == 4'b1111) begin
+        //     xSpeed <= 0;
+        //     xPos <= xPos - 1;
+        // end
     end
 
     assign playerPos = {xPos, yPos};
