@@ -35,8 +35,8 @@ module display_controller(
 
 
     wire PLAYER_ZONE;
-    assign PLAYER_ZONE = (hCount >= playerX && hCount <= playerX + 32) &&
-           (vCount >= playerY - 32 && vCount <= playerY);
+    assign PLAYER_ZONE = (hCount >= playerX && hCount <= playerX + 31) &&
+           (vCount >= playerY - 31 && vCount <= playerY);
 
     // get the appropriate block
 
@@ -47,15 +47,15 @@ module display_controller(
             rgb = BLACK;
         else if (PLAYER_ZONE) begin
             rgb = RAND;
-            // if (playerCol == 4'b1111)
-            //     rgb = GREEN;
+            if (playerCol[2] == 1 || playerCol[0] == 1)
+                rgb = GREEN;
         end
         else if (blockType == 0)
             rgb = 12'b1111_0000_0000;
         else if (blockType == 1)
             rgb = 12'b0000_0000_1111;
         else
-            rgb = 12'b1100_1100_1100;
+            rgb = GREEN;
     end
 
 endmodule

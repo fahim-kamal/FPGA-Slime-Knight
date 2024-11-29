@@ -2,46 +2,90 @@
 
 module player(
         input sim_clk,
+        input reset,
         input [3:0] playerCol,
-        output [19:0] playerPos
+        output [31:0] playerState
     );
-    reg [9:0] xPos;
-    reg [9:0] yPos;
-    reg [9:0] xSpeed;
-    reg [9:0] ySpeed;
+    reg [9:0] xPos, yPos;
+    reg [4:0] xSpeed, ySpeed;
+    reg xDir, yDir;
 
     localparam left = 1'b0,
-               right = 1'b1;
+               right = 1'b1,
+               down = 1'b0,
+               up = 1'b1;
 
-    reg playerDir;
+    localparam GRAVITY = 1;
+
+    localparam BOT_COL = 4'd1;
 
     initial
     begin
-        xPos = 10'd200;
-        yPos = 10'd300;
-        xSpeed = 10'd3;
-        ySpeed = 10'd0;
-        playerDir = 1'b1;
+        xPos = 10'd176;
+        yPos = 10'd99;
+        xSpeed = 5'd2;
+        ySpeed = 5'd0;
+        xDir = right;
+        yDir = down;
     end
 
+    reg [1:0] counter;
+    wire GRAVITY_STEP;
+
+    assign GRAVITY_STEP = counter == 2'd1;
+
+    always @ (posedge sim_clk) begin
+        counter <= counter + 1;
+    end
+
+    wire HOR_COL;
+    wire VERT_COL;
+
+    assign HOR_COL = playerCol[0] || playerCol[2];
+    assign VERT_COL = playerCol[1] || playerCol[3];
+
     always @(posedge sim_clk) begin
-        if (playerDir == left)
-            xPos <= xPos - xSpeed;
-        else if (playerDir == right)
-            xPos <= xPos + xSpeed;
+        if (reset) begin
+            xPos = 10'd176;
+            yPos = 10'd99;
+            xSpeed = 5'd2;
+            ySpeed = 5'd0;
+            xDir = right;
+            yDir = down;
+        end
+        else begin
+            xPos <= xDir == left
+                 ? xPos - xSpeed
+                 : xPos + xSpeed;
 
-        // if we detect a collision on this move
-        // stop moving
-        if (playerCol == 4'b1111) begin
-            if (playerDir == right)
-                xPos <= xPos - ((xPos - 144) & 31) - 1;
-            if (playerDir == left)
-                xPos <= xPos + (32 - ((xPos - 144) & 31));
 
-            playerDir <= playerDir == left ? right : left;
+            // if (GRAVITY_STEP) begin
+            yPos <= yDir == down
+                 ? yPos + ySpeed:
+                 yPos - ySpeed;
+
+            ySpeed <= ySpeed + GRAVITY;
+            // end
+
+            // horizontal collision
+            if (HOR_COL) begin
+                // move to grid boundary
+                xPos <= xDir == left
+                     ? xPos - xSpeed + (32 - ((xPos - xSpeed - 144) & 31))
+                     : xPos + xSpeed - ((xPos + xSpeed - 144) & 31) - 1;
+
+                xDir <= xDir == left ? right : left;
+            end
+
+            if (VERT_COL) begin
+                if (playerCol[BOT_COL]) begin
+                    yPos <= yPos + ySpeed - ((yPos + ySpeed - 35) & 31) - 1;
+                    ySpeed <= 0;
+                end
+            end
         end
     end
 
-    assign playerPos = {xPos, yPos};
+    assign playerState = {xPos, yPos, xSpeed, ySpeed, xDir, yDir};
 
 endmodule

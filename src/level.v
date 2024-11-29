@@ -10,6 +10,7 @@ module set_ptr (
         output [5:0] row_ptr, col_ptr,
         output valid
     );
+
     assign row_ptr = (y - TOP) >> 5;   // divide by 5
     assign col_ptr = (x - LEFT) >> 5;
 
@@ -35,7 +36,7 @@ module level(
     end
 
     wire [5:0] row_ptr1, col_ptr1, row_ptr2, col_ptr2;
-    wire valid1, data1, valid2, data2;
+    wire valid1, valid2;
 
     // first pinout
     set_ptr sp1(

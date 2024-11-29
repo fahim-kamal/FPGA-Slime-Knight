@@ -3,6 +3,9 @@
 module sk_top(
         input ClkPort,
 
+        // Player IO
+        input BtnD,
+
         // VGA Signal
         output hSync, vSync,
         output [3:0] vgaR, vgaB, vgaG,
@@ -17,11 +20,10 @@ module sk_top(
 
     // clk
     wire sim_clk;
-    wire clk25;
-    clk sc(.ClkPort(ClkPort), .sim_clk(sim_clk), .clk25(clk25));
+    clk sc(.ClkPort(ClkPort), .sim_clk(sim_clk));
 
     // game state
-    wire [19:0] pPos;
+    wire [31:0] pState;
     wire [3:0] pCol;
 
     // collision detector
@@ -29,7 +31,7 @@ module sk_top(
     wire [9:0] colX, colY;
     collision_resolver cr(.clk(ClkPort),
                           .sim_clk(sim_clk),
-                          .playerPos(pPos),
+                          .playerState(pState),
                           .playerCol(pCol),
                           .blockType(playerBlockType),
                           .x(colX),
@@ -45,7 +47,7 @@ module sk_top(
               .data2(playerBlockType));
 
     // player
-    player p(.sim_clk(sim_clk), .playerCol(pCol), .playerPos(pPos));
+    player p(.sim_clk(sim_clk), .reset(BtnD), .playerCol(pCol), .playerState(pState));
 
     // display
     vga_controller vctrl(.clk(ClkPort),
@@ -57,7 +59,7 @@ module sk_top(
                              .frameStart(fs),
                              .hCount(hc), .vCount(vc),
                              .bright(bright), .rgb(rgb),
-                             .playerPos(pPos),
+                             .playerPos(pState[31:12]),
                              .playerCol(pCol),
                              .blockType(displayBlockType));
 

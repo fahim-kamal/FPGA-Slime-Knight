@@ -2,8 +2,7 @@
 
 module clk(
         input ClkPort,
-        output sim_clk,
-        output clk25
+        output sim_clk
     );
     reg [26:0] clk_ctr;
 
@@ -15,5 +14,4 @@ module clk(
 
     // outputs
     assign sim_clk = clk_ctr[21:20];
-    assign clk_25 = clk_ctr[1:0];
 endmodule
