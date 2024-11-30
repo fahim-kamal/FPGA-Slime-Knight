@@ -3,10 +3,26 @@ import os
 from matplotlib import pyplot as plt
 from matplotlib import colors
 
-BACKGROUND = 0
-GRID = 1
+BACKGROUND_BRICK = 0
+FOREGROUND_BRICK = 1
+HALF_SLAB = 2
+CAMP_FIRE = 3
+EXIT_DOOR = 4
 
-BLOCK_COLOR_MAP = {"#ffffff": BACKGROUND, "#000000": GRID}
+WHITE = "#ffffff"
+BLACK = "#000000"
+GRAY = "#737373"
+GOLD = "#edb600"
+BROWN = "#804d00"
+
+COLOR_BLOCK_MAP = {
+    WHITE: BACKGROUND_BRICK,
+    BLACK: FOREGROUND_BRICK,
+    GRAY: HALF_SLAB,
+    GOLD: CAMP_FIRE,
+    BROWN: EXIT_DOOR,
+}
+
 BASE_PATH = "../levels"
 
 
@@ -24,10 +40,12 @@ def convertLevelToBits(path: str):
     for row in img:
         for i, col in enumerate(row):
             hex = colors.to_hex(col)
-            num = BLOCK_COLOR_MAP[hex]
-            f.write(f"{num}")
+            num = COLOR_BLOCK_MAP[hex]
+            f.write(f"{bin(num)[2:].rjust(3, '0')}")
             if i == d - 1:
                 f.write("\n")
+            else:
+                f.write(" ")
 
     f.close()
 

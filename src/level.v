@@ -29,7 +29,7 @@ module level(
         input [9:0] y2,
         output data2
     );
-    reg [0:COL_MAX] level [ROW_MAX:0];
+    reg [2:0] level [ROW_MAX:0][0:COL_MAX];
 
     initial begin
         $readmemb("lvl1.mem", level);
