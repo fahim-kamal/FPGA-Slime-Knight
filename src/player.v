@@ -3,6 +3,7 @@
 module player(
         input sim_clk,
         input reset,
+        input jump_r,
         input [3:0] playerCol,
         output [31:0] playerState
     );
@@ -23,19 +24,10 @@ module player(
     begin
         xPos = 10'd176;
         yPos = 10'd99;
-        xSpeed = 5'd2;
+        xSpeed = 5'd4;
         ySpeed = 5'd0;
         xDir = right;
         yDir = down;
-    end
-
-    reg [1:0] counter;
-    wire GRAVITY_STEP;
-
-    assign GRAVITY_STEP = counter == 2'd1;
-
-    always @ (posedge sim_clk) begin
-        counter <= counter + 1;
     end
 
     wire HOR_COL;
@@ -44,28 +36,47 @@ module player(
     assign HOR_COL = playerCol[0] || playerCol[2];
     assign VERT_COL = playerCol[1] || playerCol[3];
 
+    // jump
+    reg airborne;
+
     always @(posedge sim_clk) begin
         if (reset) begin
             xPos = 10'd176;
             yPos = 10'd99;
-            xSpeed = 5'd2;
+            xSpeed = 5'd4;
             ySpeed = 5'd0;
             xDir = right;
             yDir = down;
         end
         else begin
+            // update positions
             xPos <= xDir == left
                  ? xPos - xSpeed
                  : xPos + xSpeed;
 
-
-            // if (GRAVITY_STEP) begin
             yPos <= yDir == down
                  ? yPos + ySpeed:
                  yPos - ySpeed;
 
-            ySpeed <= ySpeed + GRAVITY;
-            // end
+            // update speeds
+            if (jump_r && !airborne && (playerCol[BOT_COL] || ySpeed == 0)) begin
+                ySpeed <= 17; // will subtract on this clock
+                yDir <= up;
+                airborne <= 1;
+            end
+            else begin
+                if (yDir == down)
+                    ySpeed <= ySpeed + GRAVITY;
+                else begin
+                    if (ySpeed > GRAVITY)
+                        ySpeed <= ySpeed - GRAVITY;
+                    else begin
+                        ySpeed <= 0;
+                        yDir <= down;
+                    end
+                end
+
+            end
 
             // horizontal collision
             if (HOR_COL) begin
@@ -81,8 +92,15 @@ module player(
                 if (playerCol[BOT_COL]) begin
                     yPos <= yPos + ySpeed - ((yPos + ySpeed - 35) & 31) - 1;
                     ySpeed <= 0;
+                    airborne <= 0;
+                end
+                else begin
+                    yPos <= yPos - ySpeed + (32 - ((yPos - ySpeed - 35) & 31));
+                    ySpeed <= 0;
+                    yDir <= down;
                 end
             end
+
         end
     end
 

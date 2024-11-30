@@ -20,6 +20,7 @@ module display_controller(
     parameter RAND = 12'b1101_1010_1101;
     parameter GREEN = 12'b0000_1111_0000;
     parameter RED = 12'b0011_0000_0000;
+    parameter GRAY = 12'b1111_1111_1111;
 
     reg [9:0] playerX;
     reg [9:0] playerY;
@@ -51,7 +52,7 @@ module display_controller(
                 rgb = GREEN;
         end
         else if (blockType == 0)
-            rgb = 12'b1111_0000_0000;
+            rgb = GRAY;
         else if (blockType == 1)
             rgb = 12'b0000_0000_1111;
         else

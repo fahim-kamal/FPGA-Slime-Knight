@@ -4,7 +4,7 @@ module sk_top(
         input ClkPort,
 
         // Player IO
-        input BtnD,
+        input BtnL, BtnD,
 
         // VGA Signal
         output hSync, vSync,
@@ -21,6 +21,10 @@ module sk_top(
     // clk
     wire sim_clk;
     clk sc(.ClkPort(ClkPort), .sim_clk(sim_clk));
+
+    // user input
+    wire jump_r;
+    assign jump_r = BtnL;
 
     // game state
     wire [31:0] pState;
@@ -47,7 +51,11 @@ module sk_top(
               .data2(playerBlockType));
 
     // player
-    player p(.sim_clk(sim_clk), .reset(BtnD), .playerCol(pCol), .playerState(pState));
+    player p(.sim_clk(sim_clk),
+             .reset(BtnD),
+             .jump_r(jump_r),
+             .playerCol(pCol),
+             .playerState(pState));
 
     // display
     vga_controller vctrl(.clk(ClkPort),
