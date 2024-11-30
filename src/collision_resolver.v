@@ -16,7 +16,7 @@ module player_resolver(
         input player_xDir, player_yDir,
 
         // enviornment
-        input blockType,
+        input [2:0] blockType,
         output reg [9:0] x, y,
 
         // output
@@ -131,7 +131,13 @@ module player_resolver(
         if (state >= check_bl && state <= check_br) begin
             // determine if we collided based on blocktype
             case (blockType)
-                1'b1: collided = 1;
+                3'd1: collided = 1;
+                3'd2: begin
+                    if (player_yDir == down)
+                        collided = 1;
+                    else
+                        collided = 0;
+                end
                 default: collided = 0;
             endcase
 
@@ -160,7 +166,7 @@ module collision_resolver(
         output reg [3:0] playerCol,
 
         // enviornment
-        input blockType,
+        input [2:0] blockType,
         output [9:0] x, y
 
     );

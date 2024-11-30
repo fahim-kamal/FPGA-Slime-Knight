@@ -1,5 +1,45 @@
 `timescale 1ns / 1ps
 
+module display_player(
+        input [9:0] x, y, playerX, playerY,
+        input [3:0] playerCol,
+        output playerZone,
+        output [11:0] rgb
+    );
+    localparam PLAYER_SIZE = 32;
+
+    assign playerZone = (x >= playerX && x <= (playerX + PLAYER_SIZE - 1))
+           && (y >= (playerY - (PLAYER_SIZE - 1)) && y <= playerY);
+
+    wire VERT_COL;
+    assign VERT_COL = playerCol[3] || playerCol[1];
+
+    localparam RED = 12'b1111_0000_0000;
+    localparam BLUE = 12'b0000_0000_1111;
+    assign rgb = VERT_COL ? BLUE : RED;
+endmodule
+
+module display_half_slab(
+        input [9:0] x, y,
+        input [2:0] blockType,
+        output halfSlabZone,
+        output [11:0] rgb
+    );
+    // only show on the upper half of block
+    localparam HALF_SLAB_ID = 2;
+
+    wire isHalfSlab;
+    assign isHalfSlab = blockType == HALF_SLAB_ID;
+
+    wire isUpperHalf;
+    assign isUpperHalf = ((y - 35) & 31) <= 15;
+
+    assign halfSlabZone = isHalfSlab && isUpperHalf;
+
+    localparam GREEN = 12'b0000_1111_0000;
+    assign rgb = GREEN;
+endmodule
+
 module display_controller(
         input clk,
         input frameStart,
@@ -34,29 +74,42 @@ module display_controller(
         end
     end
 
-
     wire PLAYER_ZONE;
-    assign PLAYER_ZONE = (hCount >= playerX && hCount <= playerX + 31) &&
-           (vCount >= playerY - 31 && vCount <= playerY);
+    wire [11:0] PLAYER_RGB;
+    display_player d_p(
+                       .x(hCount),
+                       .y(vCount),
+                       .playerX(playerX),
+                       .playerY(playerY),
+                       .playerCol(playerCol),
+                       .playerZone(PLAYER_ZONE),
+                       .rgb(PLAYER_RGB)
+                   );
 
     // get the appropriate block
+    wire HALF_SLAB_ZONE;
+    wire [11:0] HALF_SLAB_RGB;
+    display_half_slab d_hs(
+                          .x(hCount),
+                          .y(vCount),
+                          .blockType(blockType),
+                          .halfSlabZone(HALF_SLAB_ZONE),
+                          .rgb(HALF_SLAB_RGB)
+                      );
 
     // painting
     always @(*)
     begin
         if (~bright)
             rgb = BLACK;
-        else if (PLAYER_ZONE) begin
-            rgb = RAND;
-            if (playerCol[2] == 1 || playerCol[0] == 1)
-                rgb = GREEN;
-        end
-        else if (blockType == 0)
-            rgb = GRAY;
+        else if (PLAYER_ZONE)
+            rgb = PLAYER_RGB;
         else if (blockType == 1)
             rgb = 12'b0000_0000_1111;
+        else if (HALF_SLAB_ZONE)
+            rgb = HALF_SLAB_RGB;
         else
-            rgb = GREEN;
+            rgb = GRAY;
     end
 
 endmodule

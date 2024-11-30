@@ -31,7 +31,7 @@ module sk_top(
     wire [3:0] pCol;
 
     // collision detector
-    wire playerBlockType;
+    wire [2:0] playerBlockType;
     wire [9:0] colX, colY;
     collision_resolver cr(.clk(ClkPort),
                           .sim_clk(sim_clk),
@@ -42,7 +42,7 @@ module sk_top(
                           .y(colY));
 
     // level
-    wire displayBlockType;
+    wire [2:0] displayBlockType;
     level lvl(.x1(hc),
               .y1(vc),
               .data1(displayBlockType),

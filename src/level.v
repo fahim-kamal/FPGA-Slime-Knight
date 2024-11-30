@@ -22,14 +22,14 @@ module level(
         // pins for display
         input [9:0] x1,
         input [9:0] y1,
-        output data1,
+        output [2:0] data1,
 
         // pins for collision
         input [9:0] x2,
         input [9:0] y2,
-        output data2
+        output [2:0] data2
     );
-    reg [2:0] level [ROW_MAX:0][0:COL_MAX];
+    reg [2:0] level [0:ROW_MAX][0:COL_MAX];
 
     initial begin
         $readmemb("lvl1.mem", level);
