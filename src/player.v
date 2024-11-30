@@ -95,7 +95,7 @@ module player(
                     airborne <= 0;
                 end
                 else begin
-                    yPos <= yPos - ySpeed + (32 - ((yPos - ySpeed - 35) & 31));
+                    yPos <= yPos - ySpeed + (32 - (((yPos - ySpeed - 35) & 31) + 1));
                     ySpeed <= 0;
                     yDir <= down;
                 end
