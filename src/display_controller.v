@@ -2,7 +2,7 @@
 
 module display_player(
         input [9:0] x, y, playerX, playerY,
-        input [3:0] playerCol,
+        // input [3:0] playerCol,
         output playerZone,
         output [11:0] rgb
     );
@@ -11,12 +11,25 @@ module display_player(
     assign playerZone = (x >= playerX && x <= (playerX + PLAYER_SIZE - 1))
            && (y >= (playerY - (PLAYER_SIZE - 1)) && y <= playerY);
 
-    wire VERT_COL;
-    assign VERT_COL = playerCol[3] || playerCol[1];
+    // wire VERT_COL;
+    // assign VERT_COL = playerCol[3] || playerCol[1];
 
     localparam RED = 12'b1111_0000_0000;
+    // localparam BLUE = 12'b0000_0000_1111;
+    // assign rgb = VERT_COL ? BLUE : RED;
+    assign rgb = RED;
+endmodule
+
+module display_foreground_block(
+        input [2:0] blockType,
+        output foregroundBlockZone,
+        output [11:0] rgb
+    );
+    localparam FOREGROUND_BLOCK_ID = 1;
     localparam BLUE = 12'b0000_0000_1111;
-    assign rgb = VERT_COL ? BLUE : RED;
+
+    assign foregroundBlockZone = blockType == FOREGROUND_BLOCK_ID;
+    assign rgb = BLUE;
 endmodule
 
 module display_half_slab(
@@ -81,10 +94,16 @@ module display_controller(
                        .y(vCount),
                        .playerX(playerX),
                        .playerY(playerY),
-                       .playerCol(playerCol),
+                       // .playerCol(playerCol),
                        .playerZone(PLAYER_ZONE),
                        .rgb(PLAYER_RGB)
                    );
+
+    wire FOREGROUND_BLOCK_ZONE;
+    wire [11:0] FOREGROUND_BLOCK_RGB;
+    display_foreground_block d_fb(.blockType(blockType),
+                                  .foregroundBlockZone(FOREGROUND_BLOCK_ZONE),
+                                  .rgb(FOREGROUND_BLOCK_RGB));
 
     // get the appropriate block
     wire HALF_SLAB_ZONE;
@@ -104,8 +123,8 @@ module display_controller(
             rgb = BLACK;
         else if (PLAYER_ZONE)
             rgb = PLAYER_RGB;
-        else if (blockType == 1)
-            rgb = 12'b0000_0000_1111;
+        else if (FOREGROUND_BLOCK_ZONE)
+            rgb = FOREGROUND_BLOCK_RGB;
         else if (HALF_SLAB_ZONE)
             rgb = HALF_SLAB_RGB;
         else
