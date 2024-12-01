@@ -20,6 +20,22 @@ module display_player(
     assign rgb = RED;
 endmodule
 
+module display_blade(
+        input [9:0] x, y, bladeX, bladeY,
+        output bladeZone,
+        output [11:0] rgb
+    );
+
+    localparam BLADE_WIDTH = 28,
+               BLADE_HEIGHT = 16;
+
+    assign bladeZone = (x >= bladeX && x <= (bladeX + BLADE_WIDTH - 1))
+           && (y >= (bladeY - (BLADE_HEIGHT - 1)) && y <= bladeY);
+
+    localparam CYAN = 12'h6DF;
+    assign rgb = CYAN;
+endmodule
+
 module display_foreground_block(
         input [2:0] blockType,
         output foregroundBlockZone,
@@ -63,6 +79,9 @@ module display_controller(
         input [19:0] playerPos,
         input [3:0] playerCol,
 
+        // blade state
+        input [19:0] bladePos,
+
         // level state
         input [2:0] blockType,
 
@@ -75,8 +94,8 @@ module display_controller(
     parameter RED = 12'b0011_0000_0000;
     parameter GRAY = 12'b1111_1111_1111;
 
-    reg [9:0] playerX;
-    reg [9:0] playerY;
+    reg [9:0] playerX, playerY;
+    reg [9:0] bladeX, bladeY;
 
     always @(posedge clk)
     begin
@@ -84,8 +103,21 @@ module display_controller(
         begin
             playerX <= playerPos[19:10];
             playerY <= playerPos[9:0];
+            bladeX <= bladePos[19:10];
+            bladeY <= bladePos[9:0];
         end
     end
+
+
+    wire BLADE_ZONE;
+    wire [11:0] BLADE_RGB;
+    display_blade d_b(.x(hCount),
+                      .y(vCount),
+                      .bladeX(bladeX),
+                      .bladeY(bladeY),
+                      .bladeZone(BLADE_ZONE),
+                      .rgb(BLADE_RGB)
+                     );
 
     wire PLAYER_ZONE;
     wire [11:0] PLAYER_RGB;
@@ -105,7 +137,6 @@ module display_controller(
                                   .foregroundBlockZone(FOREGROUND_BLOCK_ZONE),
                                   .rgb(FOREGROUND_BLOCK_RGB));
 
-    // get the appropriate block
     wire HALF_SLAB_ZONE;
     wire [11:0] HALF_SLAB_RGB;
     display_half_slab d_hs(
@@ -121,6 +152,8 @@ module display_controller(
     begin
         if (~bright)
             rgb = BLACK;
+        else if (BLADE_ZONE)
+            rgb = BLADE_RGB;
         else if (PLAYER_ZONE)
             rgb = PLAYER_RGB;
         else if (FOREGROUND_BLOCK_ZONE)

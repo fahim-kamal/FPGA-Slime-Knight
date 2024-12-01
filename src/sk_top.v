@@ -4,7 +4,10 @@ module sk_top(
         input ClkPort,
 
         // Player IO
-        input BtnL, BtnD,
+        input BtnL, BtnR, BtnD,
+
+        // Debug
+        input Sw0, Sw1, Sw2, Sw3, Sw4, Sw5, Sw6, Sw7,
 
         // VGA Signal
         output hSync, vSync,
@@ -12,6 +15,10 @@ module sk_top(
 
         output QuadSpiFlashCS
     );
+    // debug
+    wire [7:0] adjustableValue;
+    assign adjustableValue = {Sw7, Sw6, Sw5, Sw4, Sw3, Sw2, Sw1, Sw0};
+
     // vga state
     wire fs;
     wire bright;
@@ -57,6 +64,17 @@ module sk_top(
              .playerCol(pCol),
              .playerState(pState));
 
+
+    // blade
+    wire [26:0] bState;
+    blade b(.sim_clk(sim_clk),
+            .shoot(BtnR),
+            .player_xPos(pState[31:22]),
+            .player_yPos(pState[21:12]),
+            .player_xSpeed(pState[11:7]),
+            .player_xDir(pState[1]),
+            .bladeState(bState));
+
     // display
     vga_controller vctrl(.clk(ClkPort),
                          .frameStart(fs),
@@ -67,8 +85,12 @@ module sk_top(
                              .frameStart(fs),
                              .hCount(hc), .vCount(vc),
                              .bright(bright), .rgb(rgb),
+
                              .playerPos(pState[31:12]),
                              .playerCol(pCol),
+
+                             .bladePos(bState[26:7]),
+
                              .blockType(displayBlockType));
 
     assign vgaR = rgb[11 : 8];
