@@ -20,6 +20,7 @@ module display_player(
     assign rgb = RED;
 endmodule
 
+// Display module for the blade
 module display_blade(
         input [9:0] x, y, bladeX, bladeY,
         output bladeZone,
@@ -36,6 +37,7 @@ module display_blade(
     assign rgb = CYAN;
 endmodule
 
+// Display module for the foreground block
 module display_foreground_block(
         input [2:0] blockType,
         output foregroundBlockZone,
@@ -48,6 +50,7 @@ module display_foreground_block(
     assign rgb = BLUE;
 endmodule
 
+// Display module for the half slab
 module display_half_slab(
         input [9:0] x, y,
         input [2:0] blockType,
@@ -69,6 +72,7 @@ module display_half_slab(
     assign rgb = GREEN;
 endmodule
 
+// Display module for the door
 module display_door(
         input [2:0] blockType,
         output doorZone,
@@ -81,7 +85,56 @@ module display_door(
     assign rgb = BROWN;
 endmodule
 
+// Display module for the lizard enemy
+module display_lizard(
+        input [9:0] x, y, lizardX, lizardY,
+        output lizardZone,
+        output [11:0] rgb
+    );
+    localparam LIZARD_WIDTH = 30,
+               LIZARD_HEIGHT = 15;
 
+    assign lizardZone = (x >= lizardX && x <= (lizardX + LIZARD_WIDTH - 1))
+           && (y >= lizardY && y <= (lizardY + LIZARD_HEIGHT - 1));
+
+    localparam ORANGE = 12'hFA5;
+    assign rgb = ORANGE;
+endmodule
+
+// Display module for the destroyable block
+module display_destroyable_block(
+        input [9:0] x, y, blockX, blockY,
+        input blockVisible,
+        output blockZone,
+        output [11:0] rgb
+    );
+    localparam BLOCK_SIZE = 32;
+
+    assign blockZone = blockVisible &&
+           (x >= blockX && x <= (blockX + BLOCK_SIZE - 1))
+           && (y >= blockY && y <= (blockY + BLOCK_SIZE - 1));
+
+    localparam PURPLE = 12'h905;
+    assign rgb = PURPLE;
+endmodule
+
+// Display module for the campfire enemy
+module display_campfire(
+        input [9:0] x, y, campfireX, campfireY,
+        output campfireZone,
+        output [11:0] rgb
+    );
+    localparam CAMPFIRE_WIDTH = 20,
+               CAMPFIRE_HEIGHT = 20;
+
+    assign campfireZone = (x >= campfireX && x <= (campfireX + CAMPFIRE_WIDTH - 1))
+           && (y >= campfireY && y <= (campfireY + CAMPFIRE_HEIGHT - 1));
+
+    localparam FLAME = 12'hF30;
+    assign rgb = FLAME;
+endmodule
+
+// Display controller module
 module display_controller(
         input clk,
         input frameStart,
@@ -98,9 +151,19 @@ module display_controller(
         // level state
         input [2:0] blockType,
 
+        // lizard state
+        input [19:0] lizardPos,
+
+        // destroyable block state
+        input [19:0] blockPos,
+        input blockVisible,
+
+        // campfire state
+        input [19:0] campfirePos,
+
         output reg [11:0] rgb
     );
-    // default colors
+    // Default colors
     parameter BLACK = 12'b0000_0000_0000;
     parameter RAND = 12'b1101_1010_1101;
     parameter GREEN = 12'b0000_1111_0000;
@@ -109,6 +172,9 @@ module display_controller(
 
     reg [9:0] playerX, playerY;
     reg [9:0] bladeX, bladeY;
+    reg [9:0] lizardX, lizardY;
+    reg [9:0] blockX, blockY;
+    reg [9:0] campfireX, campfireY;
 
     always @(posedge clk)
     begin
@@ -118,9 +184,14 @@ module display_controller(
             playerY <= playerPos[9:0];
             bladeX <= bladePos[19:10];
             bladeY <= bladePos[9:0];
+            lizardX <= lizardPos[19:10];
+            lizardY <= lizardPos[9:0];
+            blockX <= blockPos[19:10];
+            blockY <= blockPos[9:0];
+            campfireX <= campfirePos[19:10];
+            campfireY <= campfirePos[9:0];
         end
     end
-
 
     wire BLADE_ZONE;
     wire [11:0] BLADE_RGB;
@@ -166,7 +237,21 @@ module display_controller(
                      .doorZone(DOOR_ZONE),
                      .rgb(DOOR_RGB));
 
-    // painting
+    // Added display modules
+    wire LIZARD_ZONE, BLOCK_ZONE, CAMPFIRE_ZONE;
+    wire [11:0] LIZARD_RGB, BLOCK_RGB, CAMPFIRE_RGB;
+
+    display_lizard d_l(.x(hCount), .y(vCount), .lizardX(lizardX), .lizardY(lizardY),
+                       .lizardZone(LIZARD_ZONE), .rgb(LIZARD_RGB));
+
+    display_destroyable_block d_db(.x(hCount), .y(vCount), .blockX(blockX), .blockY(blockY),
+                                   .blockVisible(blockVisible), .blockZone(BLOCK_ZONE),
+                                   .rgb(BLOCK_RGB));
+
+    display_campfire d_cf(.x(hCount), .y(vCount), .campfireX(campfireX), .campfireY(campfireY),
+                          .campfireZone(CAMPFIRE_ZONE), .rgb(CAMPFIRE_RGB));
+
+    // Painting
     always @(*)
     begin
         if (~bright)
@@ -175,6 +260,12 @@ module display_controller(
             rgb = BLADE_RGB;
         else if (PLAYER_ZONE)
             rgb = PLAYER_RGB;
+        else if (LIZARD_ZONE)
+            rgb = LIZARD_RGB;
+        else if (BLOCK_ZONE)
+            rgb = BLOCK_RGB;
+        else if (CAMPFIRE_ZONE)
+            rgb = CAMPFIRE_RGB;
         else if (FOREGROUND_BLOCK_ZONE)
             rgb = FOREGROUND_BLOCK_RGB;
         else if (HALF_SLAB_ZONE)
