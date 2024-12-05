@@ -5,6 +5,7 @@ module player(
         input reset,
         input jump_r,
         input [3:0] playerCol,
+        input [31:0] initPlayerState,
         output [31:0] playerState
     );
     reg [9:0] xPos, yPos;
@@ -41,12 +42,12 @@ module player(
 
     always @(posedge sim_clk) begin
         if (reset) begin
-            xPos = 10'd176;
-            yPos = 10'd99;
-            xSpeed = 5'd4;
-            ySpeed = 5'd0;
-            xDir = right;
-            yDir = down;
+            xPos <= initPlayerState[31:22];
+            yPos <= initPlayerState[21:12];
+            xSpeed <= initPlayerState[11:7];
+            ySpeed <= initPlayerState[6:2];
+            xDir <= initPlayerState[1];
+            yDir <= initPlayerState[0];
         end
         else begin
             // update positions

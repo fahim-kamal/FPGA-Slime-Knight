@@ -4,6 +4,7 @@ module lizard(
         input sim_clk,
         input reset,
         input [1:0] lizardCol,       // Collision input for lizard
+        input [31:0] initLizardState,
         output [31:0] lizardState    // Lizard state output
     );
     reg [9:0] xPos, yPos;            // Position registers
@@ -28,10 +29,10 @@ module lizard(
     always @(posedge sim_clk) begin
         if (reset) begin
             // Reset lizard state
-            xPos <= 10'd450;
-            yPos <= 10'd150;
-            xSpeed <= 5'd3;
-            xDir <= right;
+            xPos <= initLizardState[31:22];
+            yPos <= initLizardState[21:12];
+            xSpeed <= initLizardState[11:7];
+            xDir <= initLizardState[1];
         end
         else begin
             // Update horizontal position

@@ -2,7 +2,6 @@
 
 module display_player(
         input [9:0] x, y, playerX, playerY,
-        // input [3:0] playerCol,
         output playerZone,
         output [11:0] rgb
     );
@@ -11,12 +10,7 @@ module display_player(
     assign playerZone = (x >= playerX && x <= (playerX + PLAYER_SIZE - 1))
            && (y >= (playerY - (PLAYER_SIZE - 1)) && y <= playerY);
 
-    // wire VERT_COL;
-    // assign VERT_COL = playerCol[3] || playerCol[1];
-
     localparam RED = 12'b1111_0000_0000;
-    // localparam BLUE = 12'b0000_0000_1111;
-    // assign rgb = VERT_COL ? BLUE : RED;
     assign rgb = RED;
 endmodule
 
@@ -110,9 +104,9 @@ module display_destroyable_block(
     );
     localparam BLOCK_SIZE = 32;
 
-    assign blockZone = blockVisible &&
-           (x >= blockX && x <= (blockX + BLOCK_SIZE - 1))
-           && (y >= blockY && y <= (blockY + BLOCK_SIZE - 1));
+    assign blockZone = blockVisible
+           && (x >= blockX && x <= (blockX + BLOCK_SIZE - 1))
+           && (y >= (blockY - (BLOCK_SIZE - 1)) && y <= blockY);
 
     localparam PURPLE = 12'h905;
     assign rgb = PURPLE;
@@ -156,7 +150,7 @@ module display_controller(
 
         // destroyable block state
         input [19:0] blockPos,
-        input blockVisible,
+        input isBlockVisible,
 
         // campfire state
         input [19:0] campfirePos,
@@ -176,6 +170,7 @@ module display_controller(
     reg [9:0] bladeX, bladeY;
     reg [9:0] lizardX, lizardY;
     reg [9:0] blockX, blockY;
+    reg blockVisible;
     reg [9:0] campfireX, campfireY;
 
     always @(posedge clk)
@@ -190,6 +185,7 @@ module display_controller(
             lizardY <= lizardPos[9:0];
             blockX <= blockPos[19:10];
             blockY <= blockPos[9:0];
+            blockVisible <= isBlockVisible;
             campfireX <= campfirePos[19:10];
             campfireY <= campfirePos[9:0];
         end
@@ -246,8 +242,12 @@ module display_controller(
     display_lizard d_l(.x(hCount), .y(vCount), .lizardX(lizardX), .lizardY(lizardY),
                        .lizardZone(LIZARD_ZONE), .rgb(LIZARD_RGB));
 
-    display_destroyable_block d_db(.x(hCount), .y(vCount), .blockX(blockX), .blockY(blockY),
-                                   .blockVisible(blockVisible), .blockZone(BLOCK_ZONE),
+    display_destroyable_block d_db(.x(hCount),
+                                   .y(vCount),
+                                   .blockX(blockX),
+                                   .blockY(blockY),
+                                   .blockVisible(blockVisible),
+                                   .blockZone(BLOCK_ZONE),
                                    .rgb(BLOCK_RGB));
 
     display_campfire d_cf(.x(hCount), .y(vCount), .campfireX(campfireX), .campfireY(campfireY),

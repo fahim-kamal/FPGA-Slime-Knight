@@ -34,14 +34,31 @@ module sk_top(
     assign jump_r = BtnL;
 
     // game state
+    wire [2:0] level_num;
+
+    wire [31:0] initPlayerState;
     wire [31:0] pState;
     wire [3:0] pCol;
 
     wire [26:0] bState;
     wire bCol;
 
+    wire [31:0] initLizardState;
     wire [31:0] lizardState;
     wire [1:0] lizardCol;
+
+    wire blockCol;
+    wire [20:0] initBlockState;
+    wire [20:0] blockState;
+
+    // core game logic
+    game_controller gc(.sim_clk(sim_clk),
+                       .reset(BtnD),
+                       .initPlayerState(initPlayerState),
+                       .initLizardState(initLizardState),
+                       .initBlockState(initBlockState),
+                       .level_num(level_num)
+                      );
 
     // collision detector
     wire [2:0] playerBlockType;
@@ -56,6 +73,7 @@ module sk_top(
                           .bladeCol(bCol),
                           .lizardState(lizardState),
                           .lizardCol(lizardCol),
+                          .blockPos(blockState[20:1]),
                           .blockType1(playerBlockType),
                           .x1(colX1),
                           .y1(colY1),
@@ -87,6 +105,7 @@ module sk_top(
              .reset(BtnD),
              .jump_r(jump_r),
              .playerCol(pCol),
+             .initPlayerState(initPlayerState),
              .playerState(pState));
 
 
@@ -105,6 +124,7 @@ module sk_top(
                .sim_clk(sim_clk),
                .reset(BtnD),
                .lizardCol(lizardCol),
+               .initLizardState(initLizardState),
                .lizardState(lizardState)
            );
 
@@ -117,10 +137,12 @@ module sk_top(
              );
 
     // Destroyable Block
-    wire [19:0] blockPos;
-    wire blockVisible;
-    assign blockPos = {10'd300, 10'd200};  // Example position
-    assign blockVisible = 1'b1;            // Initially visible
+    destroyable_block db(.sim_clk(sim_clk),
+                         .reset(BtnD),
+                         //  .col(blockCol),
+                         .initBlockState(initBlockState),
+                         .blockState(blockState)
+                        );
 
     // display
     vga_controller vctrl(.clk(ClkPort),
@@ -154,8 +176,8 @@ module sk_top(
                            .campfirePos(campfireState[31:12]),
 
                            // Destroyable Block
-                           .blockPos(blockPos),
-                           .blockVisible(blockVisible)
+                           .blockPos(blockState[20:1]),
+                           .isBlockVisible(blockState[0])
                        );
 
     assign vgaR = rgb[11 : 8];
