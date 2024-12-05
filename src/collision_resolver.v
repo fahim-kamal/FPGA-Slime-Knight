@@ -148,7 +148,7 @@ module player_resolver(
         state = idle;
     end
 
-    always @ (posedge clk) begin
+    always @(posedge clk) begin
         case (state)
             idle: begin
                 // start computation on enable signal
@@ -263,26 +263,24 @@ module collision_resolver(
 
         // lizard state
         input [31:0] lizardState,
-        output reg lizardCol,
+        output reg [3:0] lizardCol,
 
         // campfire state
         input [31:0] campfireState,
-        output reg campfireCol,
+        output reg [3:0] campfireCol,
 
         // destroyable block state
         input [19:0] blockPos,
-        input blockVisible,
-        output reg blockCol,
+        output reg [3:0] blockCol,
 
         // environment
         input [2:0] blockType1,
         output [9:0] x1, y1,
-
         input [2:0] blockType2,
         output [9:0] x2, y2
     );
 
-    // Player state
+    // player state
     reg [9:0] player_xPos, player_yPos;
     reg [4:0] player_xSpeed, player_ySpeed;
     reg player_xDir, player_yDir;
@@ -291,7 +289,7 @@ module collision_resolver(
     reg playerEn;
     wire playerValid;
 
-    // Blade state
+    // blade state
     reg [9:0] blade_xPos, blade_yPos;
     reg [4:0] blade_xSpeed;
     reg blade_xDir;
@@ -300,30 +298,28 @@ module collision_resolver(
     reg bladeEn;
     wire bladeValid;
 
-    // Lizard state
+    // lizard state
     reg [9:0] lizard_xPos, lizard_yPos;
     reg [4:0] lizard_xSpeed;
     reg lizard_xDir;
 
-    wire tempLizardCol;
+    wire [3:0] tempLizardCol;
     reg lizardEn;
     wire lizardValid;
 
-    // Campfire state
+    // campfire state
     reg [9:0] campfire_xPos, campfire_yPos;
-
-    wire tempCampfireCol;
+    wire [3:0] tempCampfireCol;
     reg campfireEn;
     wire campfireValid;
 
-    // Destroyable block state
+    // destroyable block state
     reg [9:0] block_xPos, block_yPos;
+    wire [3:0] tempBlockCol;
     reg blockEn;
-
-    wire tempBlockCol;
     wire blockValid;
 
-    // Sampling inputs
+    // clock sampling
     reg sim_clk_s, sim_clk_ss;
 
     always @(posedge clk) begin
@@ -331,10 +327,11 @@ module collision_resolver(
         sim_clk_ss <= sim_clk_s;
     end
 
-    // State machine
+    // state machine
     localparam
         init = 3'd0,
-        send = 3'd3;
+        compute = 3'd1,
+        send = 3'd2;
 
     reg [2:0] state;
 
@@ -350,7 +347,7 @@ module collision_resolver(
     always @(posedge clk) begin
         case (state)
             init: begin
-                // Initialize inputs
+                // initialize inputs
                 player_xPos <= playerState[31:22];
                 player_yPos <= playerState[21:12];
                 player_xSpeed <= playerState[11:7];
@@ -374,18 +371,18 @@ module collision_resolver(
                 block_xPos <= blockPos[19:10];
                 block_yPos <= blockPos[9:0];
 
-                // Start collision detection
+                // enable modules
                 playerEn <= 1;
                 bladeEn <= 1;
                 lizardEn <= 1;
                 campfireEn <= 1;
-                blockEn <= blockVisible;
+                blockEn <= 1;
 
-                state <= send;
+                state <= compute;
             end
 
-            send: begin
-                if (sim_clk_ss && playerValid && bladeValid && lizardValid && campfireValid && blockValid) begin
+            compute: begin
+                if (playerValid && bladeValid && lizardValid && campfireValid && blockValid) begin
                     playerCol <= temp_col;
                     bladeCol <= tempBladeCol;
                     lizardCol <= tempLizardCol;
@@ -398,12 +395,17 @@ module collision_resolver(
                     campfireEn <= 0;
                     blockEn <= 0;
 
-                    state <= init;
+                    state <= send;
                 end
+            end
+
+            send: begin
+                state <= init;
             end
         endcase
     end
 
+    // player resolver
     player_resolver pc(
         .clk(clk),
         .en(playerEn),
@@ -420,6 +422,7 @@ module collision_resolver(
         .y(y1)
     );
 
+    // blade resolver
     blade_resolver br(
         .clk(clk),
         .en(bladeEn),
@@ -428,58 +431,60 @@ module collision_resolver(
         .blade_xSpeed(blade_xSpeed),
         .blade_xDir(blade_xDir),
         .blockType(blockType2),
-        .x(x2),
-        .y(y2),
         .valid(bladeValid),
-        .col(tempBladeCol)
+        .col(tempBladeCol),
+        .x(x2),
+        .y(y2)
     );
 
+    // lizard resolver
     player_resolver lr(
         .clk(clk),
         .en(lizardEn),
         .player_xPos(lizard_xPos),
         .player_yPos(lizard_yPos),
         .player_xSpeed(lizard_xSpeed),
-        .player_ySpeed(5'b0),
+        .player_ySpeed(5'd0),
         .player_xDir(lizard_xDir),
         .player_yDir(1'b0),
         .blockType(blockType1),
         .valid(lizardValid),
         .col(tempLizardCol),
-        .x(x1),
+        .x(x1), // dedicated lizard outputs can be added
         .y(y1)
     );
 
+    // campfire resolver
     player_resolver cr(
         .clk(clk),
         .en(campfireEn),
         .player_xPos(campfire_xPos),
         .player_yPos(campfire_yPos),
-        .player_xSpeed(5'b0),
-        .player_ySpeed(5'b0),
+        .player_xSpeed(5'd0),
+        .player_ySpeed(5'd0),
         .player_xDir(1'b0),
         .player_yDir(1'b0),
         .blockType(blockType1),
         .valid(campfireValid),
         .col(tempCampfireCol),
-        .x(x1),
+        .x(x1), // dedicated campfire outputs can be added
         .y(y1)
     );
 
+    // destroyable block resolver
     player_resolver blr(
         .clk(clk),
         .en(blockEn),
         .player_xPos(block_xPos),
         .player_yPos(block_yPos),
-        .player_xSpeed(5'b0),
-        .player_ySpeed(5'b0),
+        .player_xSpeed(5'd0),
+        .player_ySpeed(5'd0),
         .player_xDir(1'b0),
         .player_yDir(1'b0),
         .blockType(blockType1),
         .valid(blockValid),
         .col(tempBlockCol),
-        .x(x1),
+        .x(x1), // dedicated block outputs can be added
         .y(y1)
     );
-
 endmodule
