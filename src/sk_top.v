@@ -87,23 +87,65 @@ module sk_top(
             .bladeState(bState),
             .bladeCol(bCol));
 
+    // Lizard
+        wire [31:0] lizardState;
+        wire [3:0] lizardCol;
+        lizard liz(
+        .sim_clk(sim_clk),
+        .reset(BtnD),
+        .lizardCol(lizardCol),
+        .lizardState(lizardState)
+        );
+
+        // Campfire
+        wire [31:0] campfireState;
+        campfire cf(
+        .sim_clk(sim_clk),
+        .reset(BtnD),
+        .campfireState(campfireState)
+        );
+
+        // Destroyable Block
+        wire [19:0] blockPos;
+        wire blockVisible;
+        assign blockPos = {10'd300, 10'd200};  // Example position
+        assign blockVisible = 1'b1;            // Initially visible
+
     // display
     vga_controller vctrl(.clk(ClkPort),
                          .frameStart(fs),
                          .hSync(hSync), .vSync(vSync),
                          .bright(bright), .hCount(hc), .vCount(vc));
 
-    display_controller dctrl(.clk(ClkPort),
-                             .frameStart(fs),
-                             .hCount(hc), .vCount(vc),
-                             .bright(bright), .rgb(rgb),
+        // Display Controller
+        display_controller dctrl(
+                        .clk(ClkPort),
+                        .frameStart(fs),
+                        .hCount(hc),
+                        .vCount(vc),
+                        .bright(bright),
+                        .rgb(rgb),
 
-                             .playerPos(pState[31:12]),
-                             .playerCol(pCol),
+                        // Player
+                        .playerPos(pState[31:12]),
+                        .playerCol(pCol),
 
-                             .bladePos(bState[26:7]),
+                        // Blade
+                        .bladePos(bState[26:7]),
 
-                             .blockType(displayBlockType));
+                        // Level
+                        .blockType(displayBlockType),
+
+                        // Lizard
+                        .lizardPos(lizardState[31:12]),
+
+                        // Campfire
+                        .campfirePos(campfireState[31:12]),
+
+                        // Destroyable Block
+                        .blockPos(blockPos),
+                        .blockVisible(blockVisible)
+        );
 
     assign vgaR = rgb[11 : 8];
     assign vgaG = rgb[7  : 4];
