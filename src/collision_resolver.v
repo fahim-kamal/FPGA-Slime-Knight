@@ -6,6 +6,86 @@
       init -> 3'd1
 */ 
 
+module lizard_resolver(
+        input clk,
+        input en,
+
+        input [9:0] lizard_xPos, lizard_yPos,
+        input [4:0] lizard_xSpeed,
+        input lizard_xDir,
+
+        input [2:0] blockType,
+        output reg [9:0] x, y,
+
+        output reg valid,
+        output reg [1:0] col
+    );
+    localparam LIZARD_WIDTH = 32,
+               LIZARD_HEIGHT = 32;
+
+    localparam idle = 2'd0,
+               check_left = 2'd1,
+               check_right = 2'd2,
+               done = 2'd3;
+
+    reg [2:0] state;
+
+    initial begin
+        state <= idle;
+    end
+
+    reg [9:0] nextX;
+    reg collided;
+
+    always @(posedge clk) begin
+        case (state)
+            idle: begin
+                if (en) begin
+                    col <= 0;
+                    valid <= 0;
+
+                    nextX = lizard_xDir == 1'b0
+                    ? lizard_xPos - lizard_xSpeed
+                    : lizard_xPos + lizard_xSpeed;
+
+                    x <= nextX;
+                    y <= lizard_yPos;
+
+                    state <= check_left;
+                end
+            end
+            check_left: begin
+                state <= check_right;
+                x <= nextX + (LIZARD_WIDTH - 1);
+                y <= lizard_yPos;
+            end
+            check_right: begin
+                state <= done;
+                valid <= 1;
+            end
+            done: begin
+                if (!en)
+                    state <= idle;
+            end
+        endcase
+
+
+        if (state >= check_left && state <= check_right) begin
+            case (blockType)
+                3'd1: collided = 1;
+                3'd4: collided = 1;
+                default: collided = 0;
+            endcase
+
+            if (collided)
+                if (lizard_xDir == 1'b0)
+                    col[1] <= 1;
+                else
+                    col[0] <= 1;
+        end
+    end
+endmodule
+
 module blade_resolver(
         input clk,
         input en,
@@ -261,13 +341,19 @@ module collision_resolver(
         input [26:0] bladeState,
         output reg bladeCol,
 
+        // lizard state
+        input [31:0] lizardState,
+        output reg [1:0] lizardCol,
+
         // enviornment
         input [2:0] blockType1,
         output [9:0] x1, y1,
 
         input [2:0] blockType2,
-        output [9:0] x2, y2
+        output [9:0] x2, y2,
 
+        input [2:0] blockType3,
+        output [9:0] x3, y3
     );
 
     // player state
@@ -288,6 +374,15 @@ module collision_resolver(
     reg bladeEn;
     wire bladeValid;
 
+    // lizard state
+    reg [9:0] lizard_xPos, lizard_yPos;
+    reg [4:0] lizard_xSpeed;
+    reg lizard_xDir;
+
+    wire [1:0] tempLizardCol;
+    reg lizardEn;
+    wire lizardValid;
+
     // sample inputs
     reg sim_clk_s, sim_clk_ss;
 
@@ -307,6 +402,7 @@ module collision_resolver(
         state = init;
         playerEn = 0;
         bladeEn = 0;
+        lizardEn = 0;
     end
 
     always @(posedge clk) begin
@@ -325,19 +421,27 @@ module collision_resolver(
                 blade_xSpeed <= bladeState[6:2];
                 blade_xDir <= bladeState[1];
 
+                lizard_xPos <= lizardState[31:22];
+                lizard_yPos <= lizardState[21:12];
+                lizard_xSpeed <= lizardState[11:7];
+                lizard_xDir <= lizardState[1];
+
                 // start colliding player
                 playerEn <= 1;
                 bladeEn <= 1;
+                lizardEn <= 1;
 
                 state <= send;
             end
 
             send: begin
-                if (sim_clk_ss && playerValid && bladeValid) begin
+                if (sim_clk_ss && playerValid && bladeValid && lizardValid) begin
                     playerCol <= temp_col;
                     bladeCol <= tempBladeCol;
+                    lizardCol <= tempLizardCol;
                     playerEn <= 0;
                     bladeEn <= 0;
+                    lizardEn <= 0;
                     state <= init;
                 end
             end
@@ -370,4 +474,17 @@ module collision_resolver(
                       .valid(bladeValid),
                       .col(tempBladeCol)
                      );
+
+    lizard_resolver lr(.clk(clk),
+                       .en(lizardEn),
+                       .lizard_xPos(lizard_xPos),
+                       .lizard_yPos(lizard_yPos),
+                       .lizard_xSpeed(lizard_xSpeed),
+                       .lizard_xDir(lizard_xDir),
+                       .blockType(blockType3),
+                       .x(x3),
+                       .y(y3),
+                       .valid(lizardValid),
+                       .col(tempLizardCol)
+                      );
 endmodule

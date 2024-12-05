@@ -3,7 +3,7 @@
 module lizard(
         input sim_clk,
         input reset,
-        input [3:0] lizardCol,       // Collision input for lizard
+        input [1:0] lizardCol,       // Collision input for lizard
         output [31:0] lizardState    // Lizard state output
     );
     reg [9:0] xPos, yPos;            // Position registers
@@ -23,12 +23,12 @@ module lizard(
 
     wire HOR_COL;                    // Horizontal collision flag
 
-    assign HOR_COL = lizardCol[0] || lizardCol[2];  // Left or right collision
+    assign HOR_COL = lizardCol[0] || lizardCol[1];  // Left or right collision
 
     always @(posedge sim_clk) begin
         if (reset) begin
             // Reset lizard state
-            xPos <= 10'd200;
+            xPos <= 10'd450;
             yPos <= 10'd150;
             xSpeed <= 5'd3;
             xDir <= right;

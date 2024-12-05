@@ -31,7 +31,11 @@ module level(
 
         input [9:0] x3,
         input [9:0] y3,
-        output [2:0] data3
+        output [2:0] data3,
+
+        input [9:0] x4,
+        input [9:0] y4,
+        output [2:0] data4
     );
     reg [2:0] level [0:ROW_MAX][0:COL_MAX];
 
@@ -39,8 +43,11 @@ module level(
         $readmemb("lvl1.mem", level);
     end
 
-    wire [5:0] row_ptr1, col_ptr1, row_ptr2, col_ptr2, row_ptr3, col_ptr3;
-    wire valid1, valid2, valid3;
+    wire [5:0] row_ptr1, col_ptr1;
+    wire [5:0] row_ptr2, col_ptr2;
+    wire [5:0] row_ptr3, col_ptr3;
+    wire [5:0] row_ptr4, col_ptr4;
+    wire valid1, valid2, valid3, valid4;
 
     // first pinout
     set_ptr sp1(
@@ -69,8 +76,17 @@ module level(
                 .valid(valid3)
             );
 
+    set_ptr sp4(
+                .x(x4),
+                .y(y4),
+                .row_ptr(row_ptr4),
+                .col_ptr(col_ptr4),
+                .valid(valid4)
+            );
+
     // output
     assign data1 = !valid1 ? 3 : level[row_ptr1][col_ptr1];
     assign data2 = !valid2 ? 3 : level[row_ptr2][col_ptr2];
     assign data3 = !valid3 ? 3 : level[row_ptr3][col_ptr3];
+    assign data4 = !valid4 ? 3 : level[row_ptr4][col_ptr4];
 endmodule
