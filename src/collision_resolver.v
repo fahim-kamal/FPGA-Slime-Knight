@@ -14,7 +14,7 @@ module blade_resolver(
         input [4:0] blade_xSpeed,
         input blade_xDir,
 
-        // enviornment
+        // environment
         input [2:0] blockType,
         output reg [9:0] x, y,
 
@@ -107,7 +107,7 @@ module player_resolver(
         input [4:0] player_xSpeed, player_ySpeed,
         input player_xDir, player_yDir,
 
-        // enviornment
+        // environment
         input [2:0] blockType,
         output reg [9:0] x, y,
 
@@ -261,16 +261,28 @@ module collision_resolver(
         input [26:0] bladeState,
         output reg bladeCol,
 
-        // enviornment
+        // lizard state
+        input [31:0] lizardState,
+        output reg lizardCol,
+
+        // campfire state
+        input [31:0] campfireState,
+        output reg campfireCol,
+
+        // destroyable block state
+        input [19:0] blockPos,
+        input blockVisible,
+        output reg blockCol,
+
+        // environment
         input [2:0] blockType1,
         output [9:0] x1, y1,
 
         input [2:0] blockType2,
         output [9:0] x2, y2
-
     );
 
-    // player state
+    // Player state
     reg [9:0] player_xPos, player_yPos;
     reg [4:0] player_xSpeed, player_ySpeed;
     reg player_xDir, player_yDir;
@@ -279,7 +291,7 @@ module collision_resolver(
     reg playerEn;
     wire playerValid;
 
-    // blade state
+    // Blade state
     reg [9:0] blade_xPos, blade_yPos;
     reg [4:0] blade_xSpeed;
     reg blade_xDir;
@@ -288,7 +300,30 @@ module collision_resolver(
     reg bladeEn;
     wire bladeValid;
 
-    // sample inputs
+    // Lizard state
+    reg [9:0] lizard_xPos, lizard_yPos;
+    reg [4:0] lizard_xSpeed;
+    reg lizard_xDir;
+
+    wire tempLizardCol;
+    reg lizardEn;
+    wire lizardValid;
+
+    // Campfire state
+    reg [9:0] campfire_xPos, campfire_yPos;
+
+    wire tempCampfireCol;
+    reg campfireEn;
+    wire campfireValid;
+
+    // Destroyable block state
+    reg [9:0] block_xPos, block_yPos;
+    reg blockEn;
+
+    wire tempBlockCol;
+    wire blockValid;
+
+    // Sampling inputs
     reg sim_clk_s, sim_clk_ss;
 
     always @(posedge clk) begin
@@ -296,7 +331,7 @@ module collision_resolver(
         sim_clk_ss <= sim_clk_s;
     end
 
-    // sm
+    // State machine
     localparam
         init = 3'd0,
         send = 3'd3;
@@ -307,12 +342,15 @@ module collision_resolver(
         state = init;
         playerEn = 0;
         bladeEn = 0;
+        lizardEn = 0;
+        campfireEn = 0;
+        blockEn = 0;
     end
 
     always @(posedge clk) begin
         case (state)
             init: begin
-                // initialize inputs
+                // Initialize inputs
                 player_xPos <= playerState[31:22];
                 player_yPos <= playerState[21:12];
                 player_xSpeed <= playerState[11:7];
@@ -325,50 +363,123 @@ module collision_resolver(
                 blade_xSpeed <= bladeState[6:2];
                 blade_xDir <= bladeState[1];
 
-                // start colliding player
+                lizard_xPos <= lizardState[31:22];
+                lizard_yPos <= lizardState[21:12];
+                lizard_xSpeed <= lizardState[11:7];
+                lizard_xDir <= lizardState[1];
+
+                campfire_xPos <= campfireState[31:22];
+                campfire_yPos <= campfireState[21:12];
+
+                block_xPos <= blockPos[19:10];
+                block_yPos <= blockPos[9:0];
+
+                // Start collision detection
                 playerEn <= 1;
                 bladeEn <= 1;
+                lizardEn <= 1;
+                campfireEn <= 1;
+                blockEn <= blockVisible;
 
                 state <= send;
             end
 
             send: begin
-                if (sim_clk_ss && playerValid && bladeValid) begin
+                if (sim_clk_ss && playerValid && bladeValid && lizardValid && campfireValid && blockValid) begin
                     playerCol <= temp_col;
                     bladeCol <= tempBladeCol;
+                    lizardCol <= tempLizardCol;
+                    campfireCol <= tempCampfireCol;
+                    blockCol <= tempBlockCol;
+
                     playerEn <= 0;
                     bladeEn <= 0;
+                    lizardEn <= 0;
+                    campfireEn <= 0;
+                    blockEn <= 0;
+
                     state <= init;
                 end
             end
         endcase
     end
 
-    player_resolver pc(.clk(clk),
-                       .en(playerEn),
-                       .player_xPos(player_xPos),
-                       .player_yPos(player_yPos),
-                       .player_xSpeed(player_xSpeed),
-                       .player_ySpeed(player_ySpeed),
-                       .player_xDir(player_xDir),
-                       .player_yDir(player_yDir),
-                       .blockType(blockType1),
-                       .valid(playerValid),
-                       .col(temp_col),
-                       .x(x1),
-                       .y(y1));
+    player_resolver pc(
+        .clk(clk),
+        .en(playerEn),
+        .player_xPos(player_xPos),
+        .player_yPos(player_yPos),
+        .player_xSpeed(player_xSpeed),
+        .player_ySpeed(player_ySpeed),
+        .player_xDir(player_xDir),
+        .player_yDir(player_yDir),
+        .blockType(blockType1),
+        .valid(playerValid),
+        .col(temp_col),
+        .x(x1),
+        .y(y1)
+    );
 
-    blade_resolver br(.clk(clk),
-                      .en(bladeEn),
-                      .blade_xPos(blade_xPos),
-                      .blade_yPos(blade_yPos),
-                      .blade_xSpeed(blade_xSpeed),
-                      .blade_xDir(blade_xDir),
-                      .blockType(blockType2),
-                      .x(x2),
-                      .y(y2),
-                      .valid(bladeValid),
-                      .col(tempBladeCol)
-                     );
+    blade_resolver br(
+        .clk(clk),
+        .en(bladeEn),
+        .blade_xPos(blade_xPos),
+        .blade_yPos(blade_yPos),
+        .blade_xSpeed(blade_xSpeed),
+        .blade_xDir(blade_xDir),
+        .blockType(blockType2),
+        .x(x2),
+        .y(y2),
+        .valid(bladeValid),
+        .col(tempBladeCol)
+    );
+
+    player_resolver lr(
+        .clk(clk),
+        .en(lizardEn),
+        .player_xPos(lizard_xPos),
+        .player_yPos(lizard_yPos),
+        .player_xSpeed(lizard_xSpeed),
+        .player_ySpeed(5'b0),
+        .player_xDir(lizard_xDir),
+        .player_yDir(1'b0),
+        .blockType(blockType1),
+        .valid(lizardValid),
+        .col(tempLizardCol),
+        .x(x1),
+        .y(y1)
+    );
+
+    player_resolver cr(
+        .clk(clk),
+        .en(campfireEn),
+        .player_xPos(campfire_xPos),
+        .player_yPos(campfire_yPos),
+        .player_xSpeed(5'b0),
+        .player_ySpeed(5'b0),
+        .player_xDir(1'b0),
+        .player_yDir(1'b0),
+        .blockType(blockType1),
+        .valid(campfireValid),
+        .col(tempCampfireCol),
+        .x(x1),
+        .y(y1)
+    );
+
+    player_resolver blr(
+        .clk(clk),
+        .en(blockEn),
+        .player_xPos(block_xPos),
+        .player_yPos(block_yPos),
+        .player_xSpeed(5'b0),
+        .player_ySpeed(5'b0),
+        .player_xDir(1'b0),
+        .player_yDir(1'b0),
+        .blockType(blockType1),
+        .valid(blockValid),
+        .col(tempBlockCol),
+        .x(x1),
+        .y(y1)
+    );
+
 endmodule
-
