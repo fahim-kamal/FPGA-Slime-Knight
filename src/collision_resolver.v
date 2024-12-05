@@ -6,6 +6,98 @@
       init -> 3'd1
 */ 
 
+module blade_resolver(
+        input clk,
+        input en,
+
+        input [9:0] blade_xPos, blade_yPos,
+        input [4:0] blade_xSpeed,
+        input blade_xDir,
+
+        // enviornment
+        input [2:0] blockType,
+        output reg [9:0] x, y,
+
+        output reg valid,
+        output reg col
+    );
+    // blade dim
+    localparam BLADE_WIDTH = 28,
+               BLADE_HEIGHT = 16;
+
+    // states
+    localparam idle = 3'd0,
+               check_bl = 3'd1,
+               check_ul = 3'd2,
+               check_ur = 3'd3,
+               check_br = 3'd4,
+               done = 3'd5;
+
+    reg [2:0] state;
+
+    initial begin
+        state = idle;
+    end
+
+    reg [9:0] bNextX;
+
+    reg collided;
+
+    always @(posedge clk) begin
+        case (state)
+            idle: begin
+                if (en) begin
+                    col <= 0;
+                    valid <= 0;
+
+                    bNextX = blade_xDir == 1'b0
+                    ? blade_xPos - blade_xSpeed
+                    : blade_xPos + blade_xSpeed;
+
+                    x <= bNextX;
+                    y <= blade_yPos;  // remains same
+
+                    state <= check_bl;
+                end
+            end
+            check_bl: begin
+                state <= check_ul;
+                x <= bNextX;
+                y <= blade_yPos - (BLADE_HEIGHT - 1);
+            end
+            check_ul: begin
+                state <= check_ur;
+                x <= bNextX + (BLADE_WIDTH - 1);
+                y <= blade_yPos - (BLADE_HEIGHT - 1);
+            end
+            check_ur: begin
+                state <= check_br;
+                x <= bNextX + (BLADE_WIDTH - 1);
+                y <= blade_yPos;
+            end
+            check_br: begin
+                state <= done;
+                valid <= 1;
+            end
+            done: begin
+                if (!en)
+                    state <= idle;
+            end
+        endcase
+
+        if (state >= check_bl && state <= check_br) begin
+            case (blockType)
+                3'd0: collided = 0;
+                3'd3: collided = 0;
+                default: collided = 1;
+            endcase
+
+            if (collided)
+                col <= 1;
+        end
+    end
+endmodule
+
 module player_resolver(
         input clk,
         input en,
@@ -165,19 +257,20 @@ module collision_resolver(
         input [31:0] playerState,
         output reg [3:0] playerCol,
 
+        // blade state
+        input [26:0] bladeState,
+        output reg bladeCol,
+
         // enviornment
-        input [2:0] blockType,
-        output [9:0] x, y
+        input [2:0] blockType1,
+        output [9:0] x1, y1,
+
+        input [2:0] blockType2,
+        output [9:0] x2, y2
 
     );
 
-    localparam
-        init = 3'd0,
-        send = 3'd1;
-
-    reg [2:0] state;
-    reg sim_clk_s, sim_clk_ss;
-
+    // player state
     reg [9:0] player_xPos, player_yPos;
     reg [4:0] player_xSpeed, player_ySpeed;
     reg player_xDir, player_yDir;
@@ -186,37 +279,69 @@ module collision_resolver(
     reg playerEn;
     wire playerValid;
 
+    // blade state
+    reg [9:0] blade_xPos, blade_yPos;
+    reg [4:0] blade_xSpeed;
+    reg blade_xDir;
+
+    wire tempBladeCol;
+    reg bladeEn;
+    wire bladeValid;
+
     // sample inputs
+    reg sim_clk_s, sim_clk_ss;
+
     always @(posedge clk) begin
         sim_clk_s <= sim_clk;
         sim_clk_ss <= sim_clk_s;
     end
 
     // sm
+    localparam
+        init = 3'd0,
+        send = 3'd3;
+
+    reg [2:0] state;
+
     initial begin
         state = init;
+        playerEn = 0;
+        bladeEn = 0;
     end
 
     always @(posedge clk) begin
-        if (state == init) begin
-            // initialize inputs
-            player_xPos <= playerState[31:22];
-            player_yPos <= playerState[21:12];
-            player_xSpeed <= playerState[11:7];
-            player_ySpeed <= playerState[6:2];
-            player_xDir <= playerState[1];
-            player_yDir <= playerState[0];
+        case (state)
+            init: begin
+                // initialize inputs
+                player_xPos <= playerState[31:22];
+                player_yPos <= playerState[21:12];
+                player_xSpeed <= playerState[11:7];
+                player_ySpeed <= playerState[6:2];
+                player_xDir <= playerState[1];
+                player_yDir <= playerState[0];
 
-            playerEn <= 1;
-            state <= send;
-        end
-        else if (state == send) begin
-            if (sim_clk_ss && playerValid) begin
-                playerCol <= temp_col;
-                playerEn <= 0;
-                state <= init;
+                blade_xPos <= bladeState[26:17];
+                blade_yPos <= bladeState[16:7];
+                blade_xSpeed <= bladeState[6:2];
+                blade_xDir <= bladeState[1];
+
+                // start colliding player
+                playerEn <= 1;
+                bladeEn <= 1;
+
+                state <= send;
             end
-        end
+
+            send: begin
+                if (sim_clk_ss && playerValid && bladeValid) begin
+                    playerCol <= temp_col;
+                    bladeCol <= tempBladeCol;
+                    playerEn <= 0;
+                    bladeEn <= 0;
+                    state <= init;
+                end
+            end
+        endcase
     end
 
     player_resolver pc(.clk(clk),
@@ -227,9 +352,23 @@ module collision_resolver(
                        .player_ySpeed(player_ySpeed),
                        .player_xDir(player_xDir),
                        .player_yDir(player_yDir),
-                       .blockType(blockType),
+                       .blockType(blockType1),
                        .valid(playerValid),
                        .col(temp_col),
-                       .x(x),
-                       .y(y));
+                       .x(x1),
+                       .y(y1));
+
+    blade_resolver br(.clk(clk),
+                      .en(bladeEn),
+                      .blade_xPos(blade_xPos),
+                      .blade_yPos(blade_yPos),
+                      .blade_xSpeed(blade_xSpeed),
+                      .blade_xDir(blade_xDir),
+                      .blockType(blockType2),
+                      .x(x2),
+                      .y(y2),
+                      .valid(bladeValid),
+                      .col(tempBladeCol)
+                     );
 endmodule
+

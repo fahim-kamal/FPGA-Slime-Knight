@@ -37,25 +37,37 @@ module sk_top(
     wire [31:0] pState;
     wire [3:0] pCol;
 
+    wire [26:0] bState;
+    wire bCol;
+
     // collision detector
     wire [2:0] playerBlockType;
-    wire [9:0] colX, colY;
+    wire [2:0] bladeBlockType;
+    wire [9:0] colX1, colY1, colX2, colY2;
     collision_resolver cr(.clk(ClkPort),
                           .sim_clk(sim_clk),
                           .playerState(pState),
                           .playerCol(pCol),
-                          .blockType(playerBlockType),
-                          .x(colX),
-                          .y(colY));
+                          .bladeState(bState),
+                          .bladeCol(bCol),
+                          .blockType1(playerBlockType),
+                          .x1(colX1),
+                          .y1(colY1),
+                          .blockType2(bladeBlockType),
+                          .x2(colX2),
+                          .y2(colY2));
 
     // level
     wire [2:0] displayBlockType;
     level lvl(.x1(hc),
               .y1(vc),
               .data1(displayBlockType),
-              .x2(colX),
-              .y2(colY),
-              .data2(playerBlockType));
+              .x2(colX1),
+              .y2(colY1),
+              .data2(playerBlockType),
+              .x3(colX2),
+              .y3(colY2),
+              .data3(bladeBlockType));
 
     // player
     player p(.sim_clk(sim_clk),
@@ -66,14 +78,14 @@ module sk_top(
 
 
     // blade
-    wire [26:0] bState;
     blade b(.sim_clk(sim_clk),
             .shoot(BtnR),
             .player_xPos(pState[31:22]),
             .player_yPos(pState[21:12]),
             .player_xSpeed(pState[11:7]),
             .player_xDir(pState[1]),
-            .bladeState(bState));
+            .bladeState(bState),
+            .bladeCol(bCol));
 
     // display
     vga_controller vctrl(.clk(ClkPort),

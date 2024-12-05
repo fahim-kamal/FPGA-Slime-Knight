@@ -27,7 +27,11 @@ module level(
         // pins for collision
         input [9:0] x2,
         input [9:0] y2,
-        output [2:0] data2
+        output [2:0] data2,
+
+        input [9:0] x3,
+        input [9:0] y3,
+        output [2:0] data3
     );
     reg [2:0] level [0:ROW_MAX][0:COL_MAX];
 
@@ -35,8 +39,8 @@ module level(
         $readmemb("lvl1.mem", level);
     end
 
-    wire [5:0] row_ptr1, col_ptr1, row_ptr2, col_ptr2;
-    wire valid1, valid2;
+    wire [5:0] row_ptr1, col_ptr1, row_ptr2, col_ptr2, row_ptr3, col_ptr3;
+    wire valid1, valid2, valid3;
 
     // first pinout
     set_ptr sp1(
@@ -56,7 +60,17 @@ module level(
                 .valid(valid2)
             );
 
+    // third pinout
+    set_ptr sp3(
+                .x(x3),
+                .y(y3),
+                .row_ptr(row_ptr3),
+                .col_ptr(col_ptr3),
+                .valid(valid3)
+            );
+
     // output
     assign data1 = !valid1 ? 3 : level[row_ptr1][col_ptr1];
     assign data2 = !valid2 ? 3 : level[row_ptr2][col_ptr2];
+    assign data3 = !valid3 ? 3 : level[row_ptr3][col_ptr3];
 endmodule

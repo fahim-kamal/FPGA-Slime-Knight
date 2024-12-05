@@ -6,6 +6,7 @@ module blade(
         input [9:0] player_xPos, player_yPos,
         input [4:0] player_xSpeed,
         input player_xDir,
+        input bladeCol,
         output [26:0] bladeState
     );
     reg [9:0] xPos, yPos;
@@ -19,11 +20,10 @@ module blade(
                Y_OFFSET = 8,
                X_SPEED_OFFSET = 8;
 
-    localparam init = 2'd0,
-               move = 2'd1,
-               collide = 2'd2;
+    localparam init = 1'b0,
+               move = 1'b1;
 
-    reg [1:0] state;
+    reg state;
 
     initial begin
         state = init;
@@ -55,17 +55,13 @@ module blade(
 
                 xPos <= nextX;
 
-                if (nextX < 144 || nextX > 783)
-                    state <= collide;
-            end
-
-            collide: begin
-                xPos <= 0;
-                yPos <= 0;
-                xSpeed <= 0;
-                isActive <= 0;
-
-                state <= init;
+                if (nextX < 144 || nextX > 783 || bladeCol) begin
+                    xPos <= 0;
+                    yPos <= 0;
+                    xSpeed <= 0;
+                    isActive <= 0;
+                    state <= init;
+                end
             end
         endcase
     end

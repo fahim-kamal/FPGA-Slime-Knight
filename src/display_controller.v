@@ -69,6 +69,19 @@ module display_half_slab(
     assign rgb = GREEN;
 endmodule
 
+module display_door(
+        input [2:0] blockType,
+        output doorZone,
+        output [11:0] rgb
+    );
+    localparam DOOR_ID = 3;
+    assign doorZone = blockType == 3;
+
+    localparam BROWN = 12'h630;
+    assign rgb = BROWN;
+endmodule
+
+
 module display_controller(
         input clk,
         input frameStart,
@@ -147,6 +160,12 @@ module display_controller(
                           .rgb(HALF_SLAB_RGB)
                       );
 
+    wire DOOR_ZONE;
+    wire [11:0] DOOR_RGB;
+    display_door d_d(.blockType(blockType),
+                     .doorZone(DOOR_ZONE),
+                     .rgb(DOOR_RGB));
+
     // painting
     always @(*)
     begin
@@ -160,6 +179,8 @@ module display_controller(
             rgb = FOREGROUND_BLOCK_RGB;
         else if (HALF_SLAB_ZONE)
             rgb = HALF_SLAB_RGB;
+        else if (DOOR_ZONE)
+            rgb = DOOR_RGB;
         else
             rgb = GRAY;
     end
