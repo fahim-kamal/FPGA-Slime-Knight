@@ -169,6 +169,8 @@ module display_controller(
     parameter GREEN = 12'b0000_1111_0000;
     parameter RED = 12'b0011_0000_0000;
     parameter GRAY = 12'b1111_1111_1111;
+    parameter ORANGE = 12'b1111_1010_0000;
+
 
     reg [9:0] playerX, playerY;
     reg [9:0] bladeX, bladeY;
