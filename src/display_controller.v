@@ -97,7 +97,7 @@ module display_lizard(
     assign lizardZone = (x >= lizardX && x <= (lizardX + LIZARD_WIDTH - 1))
            && (y >= lizardY && y <= (lizardY + LIZARD_HEIGHT - 1));
 
-    localparam ORANGE = 12'hFA5;
+    localparam ORANGE = 12'b1111_1010_0000;
     assign rgb = ORANGE;
 endmodule
 
