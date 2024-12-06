@@ -19,6 +19,8 @@ module set_ptr (
 endmodule
 
 module level(
+        input [2:0] level_num,
+
         // pins for display
         input [9:0] x1,
         input [9:0] y1,
@@ -37,10 +39,16 @@ module level(
         input [9:0] y4,
         output [2:0] data4
     );
-    reg [2:0] level [0:ROW_MAX][0:COL_MAX];
+    reg [2:0] level1 [0:ROW_MAX][0:COL_MAX];
+    reg [2:0] level2 [0:ROW_MAX][0:COL_MAX];
+    reg [2:0] level3 [0:ROW_MAX][0:COL_MAX];
+    reg [2:0] level4 [0:ROW_MAX][0:COL_MAX];
 
     initial begin
-        $readmemb("lvl1.mem", level);
+        $readmemb("lvl1.mem", level1);
+        $readmemb("lvl2.mem", level2);
+        $readmemb("lvl3.mem", level3);
+        $readmemb("lvl4.mem", level4);
     end
 
     wire [5:0] row_ptr1, col_ptr1;
@@ -85,8 +93,37 @@ module level(
             );
 
     // output
-    assign data1 = !valid1 ? 3 : level[row_ptr1][col_ptr1];
-    assign data2 = !valid2 ? 3 : level[row_ptr2][col_ptr2];
-    assign data3 = !valid3 ? 3 : level[row_ptr3][col_ptr3];
-    assign data4 = !valid4 ? 3 : level[row_ptr4][col_ptr4];
+
+
+    assign data1 = level_num == 0
+           ? level1[row_ptr1][col_ptr1]
+           : level_num == 1
+           ? level2[row_ptr1][col_ptr1]
+           : level_num == 2
+           ? level3[row_ptr1][col_ptr1]
+           : level4[row_ptr1][col_ptr1];
+
+    assign data2 = level_num == 0
+           ? level1[row_ptr2][col_ptr2]
+           : level_num == 1
+           ? level2[row_ptr2][col_ptr2]
+           : level_num == 2
+           ? level3[row_ptr2][col_ptr2]
+           : level4[row_ptr2][col_ptr2];
+
+    assign data3 = level_num == 0
+           ? level1[row_ptr3][col_ptr3]
+           : level_num == 1
+           ? level2[row_ptr3][col_ptr3]
+           : level_num == 2
+           ? level3[row_ptr3][col_ptr3]
+           : level4[row_ptr3][col_ptr3];
+
+    assign data4 = level_num == 0
+           ? level1[row_ptr4][col_ptr4]
+           : level_num == 1
+           ? level2[row_ptr4][col_ptr4]
+           : level_num == 2
+           ? level3[row_ptr4][col_ptr4]
+           : level4[row_ptr4][col_ptr4];
 endmodule

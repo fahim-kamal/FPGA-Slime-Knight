@@ -3,6 +3,7 @@
 module campfire(
         input sim_clk,
         input reset,
+        input [31:0] initCampfireState,
         output [31:0] campfireState    // Campfire state output
     );
     reg [9:0] xPos, yPos;              // Position registers
@@ -17,8 +18,8 @@ module campfire(
     always @(posedge sim_clk) begin
         if (reset) begin
             // Reset the campfire's position to its initial state
-            xPos <= 10'd250;
-            yPos <= 10'd180;
+            xPos <= initCampfireState[31:22];
+            yPos <= initCampfireState[21:12];
         end
     end
 

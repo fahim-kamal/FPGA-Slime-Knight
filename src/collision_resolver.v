@@ -6,7 +6,7 @@
       init -> 3'd1
 */ 
 
-task  detect_AABB_collision;
+task automatic detect_AABB_collision;
     input [9:0] x1, y1, x2, y2;
     input [9:0] width1, height1, width2, height2;
     output reg col;
@@ -112,6 +112,12 @@ module blade_resolver(
         input [4:0] blade_xSpeed,
         input blade_xDir,
 
+        input [9:0] block_xPos, block_yPos,
+        output reg blockCol,
+
+        input [9:0] lizard_xPos, lizard_yPos,
+        output reg lizardKillCol,
+
         // enviornment
         input [2:0] blockType,
         output reg [9:0] x, y,
@@ -140,12 +146,16 @@ module blade_resolver(
     reg [9:0] bNextX;
 
     reg collided;
+    reg collidedWithBlock;
+    reg collidedWithLizard;
 
     always @(posedge clk) begin
         case (state)
             idle: begin
                 if (en) begin
                     col <= 0;
+                    blockCol <= 0;
+                    lizardKillCol <= 0;
                     valid <= 0;
 
                     bNextX = blade_xDir == 1'b0
@@ -187,11 +197,33 @@ module blade_resolver(
             case (blockType)
                 3'd0: collided = 0;
                 3'd3: collided = 0;
+                3'd4: collided = 0;
                 default: collided = 1;
             endcase
 
-            if (collided)
+            if (state == check_bl) begin
+                detect_AABB_collision(
+                        x, y, block_xPos, block_yPos,
+                        BLADE_WIDTH, BLADE_HEIGHT, 32, 32, collidedWithBlock
+                    );
+
+                detect_AABB_collision(
+                        x, y, lizard_xPos, lizard_yPos,
+                        BLADE_WIDTH, BLADE_HEIGHT, 32, 32, collidedWithLizard
+                    );
+            end
+
+            if (collided || collidedWithBlock || collidedWithLizard)
                 col <= 1;
+
+            if (collidedWithBlock) begin
+                blockCol <= 1;
+            end
+
+            if (collidedWithLizard) begin
+                lizardKillCol <= 1;
+            end
+
         end
     end
 endmodule
@@ -208,13 +240,18 @@ module player_resolver(
         // destroyable block
         input [9:0] block_xPos, block_yPos,
 
+        // lizard
+        input [9:0] lizard_xPos, lizard_yPos,
+
         // enviornment
         input [2:0] blockType,
         output reg [9:0] x, y,
 
         // output
         output reg valid,
-        output reg [3:0] col
+        output reg [3:0] col,
+        output reg playerKill,
+        output reg playerWin
     );
 
     localparam TOP_COL = 4'd3,
@@ -229,6 +266,7 @@ module player_resolver(
     reg checkingHor;
     reg collided;
     reg collidedWithBlock;
+    reg collidedWithLizard;
 
     localparam
         idle = 4'd0,
@@ -258,6 +296,8 @@ module player_resolver(
                     state <= horizontal;
                     valid <= 0;
                     col <= 4'b0000;
+                    playerKill <= 0;
+                    playerWin <= 0;
                 end
             end
             horizontal: begin
@@ -332,14 +372,22 @@ module player_resolver(
                     else
                         collided = 0;
                 end
+                3'd3: playerWin <= 1;
                 default: collided = 0;
             endcase
 
             // detect collision with destroyable block
             if (state == check_bl) begin
+                // check collisions with block
                 detect_AABB_collision(
                         x, y, block_xPos, block_yPos,
                         10'd32, 10'd32, 10'd32, 10'd32, collidedWithBlock
+                    );
+
+                // check collisions with lizard
+                detect_AABB_collision(
+                        x, y, lizard_xPos, lizard_yPos,
+                        10'd32, 10'd32, 10'd32, 10'd32, collidedWithLizard
                     );
             end
 
@@ -354,6 +402,9 @@ module player_resolver(
                         col[BOT_COL] <= 1;
                     else
                         col[TOP_COL] <= 1;
+
+            if (collidedWithLizard)
+                playerKill <= 1;
         end
     end
 endmodule
@@ -366,6 +417,8 @@ module collision_resolver(
         // player state
         input [31:0] playerState,
         output reg [3:0] playerCol,
+        output reg playerKill,
+        output reg playerWin,
 
         // blade state
         input [26:0] bladeState,
@@ -374,9 +427,11 @@ module collision_resolver(
         // lizard state
         input [31:0] lizardState,
         output reg [1:0] lizardCol,
+        output reg lizardKillCol,
 
         // block state
         input [19:0] blockPos,
+        output reg blockCol,
 
         // enviornment
         input [2:0] blockType1,
@@ -394,6 +449,8 @@ module collision_resolver(
     reg [4:0] player_xSpeed, player_ySpeed;
     reg player_xDir, player_yDir;
 
+    wire tempPlayerKill;
+    wire tempPlayerWin;
     wire [3:0] temp_col;
     reg playerEn;
     wire playerValid;
@@ -413,11 +470,14 @@ module collision_resolver(
     reg lizard_xDir;
 
     wire [1:0] tempLizardCol;
+    wire tempLizardKillCol;
     reg lizardEn;
     wire lizardValid;
+    reg [9:0] lizard_nextX;
 
     // block state
     reg [9:0] block_xPos, block_yPos;
+    wire tempBlockCol;
 
     // sample inputs
     reg sim_clk_s, sim_clk_ss;
@@ -462,6 +522,10 @@ module collision_resolver(
                 lizard_xSpeed <= lizardState[11:7];
                 lizard_xDir <= lizardState[1];
 
+                lizard_nextX <= lizardState[1] == 1'b0
+                ? lizardState[31:22] - lizardState[11:7]
+                : lizardState[31:22] + lizardState[11:7];
+
                 block_xPos <= blockPos[19:10];
                 block_yPos <= blockPos[9:0];
 
@@ -478,6 +542,10 @@ module collision_resolver(
                     playerCol <= temp_col;
                     bladeCol <= tempBladeCol;
                     lizardCol <= tempLizardCol;
+                    lizardKillCol <= tempLizardKillCol;
+                    playerKill <= tempPlayerKill;
+                    playerWin <= tempPlayerWin;
+                    blockCol <= tempBlockCol;
                     playerEn <= 0;
                     bladeEn <= 0;
                     lizardEn <= 0;
@@ -495,6 +563,10 @@ module collision_resolver(
                        .player_ySpeed(player_ySpeed),
                        .player_xDir(player_xDir),
                        .player_yDir(player_yDir),
+                       .playerKill(tempPlayerKill),
+                       .playerWin(tempPlayerWin),
+                       .lizard_xPos(lizard_nextX),
+                       .lizard_yPos(lizard_yPos),
                        .block_xPos(block_xPos),
                        .block_yPos(block_yPos),
                        .blockType(blockType1),
@@ -509,6 +581,12 @@ module collision_resolver(
                       .blade_yPos(blade_yPos),
                       .blade_xSpeed(blade_xSpeed),
                       .blade_xDir(blade_xDir),
+                      .lizard_xPos(lizard_nextX),
+                      .lizard_yPos(lizard_yPos),
+                      .lizardKillCol(tempLizardKillCol),
+                      .block_xPos(block_xPos),
+                      .block_yPos(block_yPos),
+                      .blockCol(tempBlockCol),
                       .blockType(blockType2),
                       .x(x2),
                       .y(y2),

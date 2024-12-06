@@ -122,7 +122,7 @@ module display_campfire(
                CAMPFIRE_HEIGHT = 20;
 
     assign campfireZone = (x >= campfireX && x <= (campfireX + CAMPFIRE_WIDTH - 1))
-           && (y >= campfireY && y <= (campfireY + CAMPFIRE_HEIGHT - 1));
+           && (y >= (campfireY - (CAMPFIRE_HEIGHT - 1)) && y <= campfireY);
 
     localparam FLAME = 12'hF30;
     assign rgb = FLAME;

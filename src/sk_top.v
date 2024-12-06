@@ -19,6 +19,7 @@ module sk_top(
     wire [7:0] adjustableValue;
     assign adjustableValue = {Sw7, Sw6, Sw5, Sw4, Sw3, Sw2, Sw1, Sw0};
 
+
     // vga state
     wire fs;
     wire bright;
@@ -39,6 +40,9 @@ module sk_top(
     wire [31:0] initPlayerState;
     wire [31:0] pState;
     wire [3:0] pCol;
+    wire playerKill;
+    wire playerDead;
+    wire playerWin;
 
     wire [26:0] bState;
     wire bCol;
@@ -46,18 +50,30 @@ module sk_top(
     wire [31:0] initLizardState;
     wire [31:0] lizardState;
     wire [1:0] lizardCol;
+    wire lizardKillCol;
 
     wire blockCol;
     wire [20:0] initBlockState;
     wire [20:0] blockState;
 
+    wire [31:0] initCampfireState;
+    wire [31:0] campfireState;
+
+    // reset
+    wire nextLevel;
+    wire reset;
+    assign reset = playerDead || BtnD || nextLevel;
+
     // core game logic
     game_controller gc(.sim_clk(sim_clk),
-                       .reset(BtnD),
+                       .reset(reset),
                        .initPlayerState(initPlayerState),
                        .initLizardState(initLizardState),
                        .initBlockState(initBlockState),
-                       .level_num(level_num)
+                       .initCampfireState(initCampfireState),
+                       .level_num(level_num),
+                       .playerWin(playerWin),
+                       .nextLevel(nextLevel)
                       );
 
     // collision detector
@@ -69,11 +85,15 @@ module sk_top(
                           .sim_clk(sim_clk),
                           .playerState(pState),
                           .playerCol(pCol),
+                          .playerKill(playerKill),
+                          .playerWin(playerWin),
                           .bladeState(bState),
                           .bladeCol(bCol),
                           .lizardState(lizardState),
                           .lizardCol(lizardCol),
+                          .lizardKillCol(lizardKillCol),
                           .blockPos(blockState[20:1]),
+                          .blockCol(blockCol),
                           .blockType1(playerBlockType),
                           .x1(colX1),
                           .y1(colY1),
@@ -87,7 +107,8 @@ module sk_top(
 
     // level
     wire [2:0] displayBlockType;
-    level lvl(.x1(hc),
+    level lvl(.level_num(level_num),
+              .x1(hc),
               .y1(vc),
               .data1(displayBlockType),
               .x2(colX1),
@@ -102,11 +123,13 @@ module sk_top(
 
     // player
     player p(.sim_clk(sim_clk),
-             .reset(BtnD),
+             .reset(reset),
              .jump_r(jump_r),
              .playerCol(pCol),
              .initPlayerState(initPlayerState),
-             .playerState(pState));
+             .playerState(pState),
+             .playerKill(playerKill),
+             .playerDead(playerDead));
 
 
     // blade
@@ -122,24 +145,25 @@ module sk_top(
     // Lizard
     lizard liz(
                .sim_clk(sim_clk),
-               .reset(BtnD),
+               .reset(reset),
                .lizardCol(lizardCol),
+               .lizardKillCol(lizardKillCol),
                .initLizardState(initLizardState),
                .lizardState(lizardState)
            );
 
     // Campfire
-    wire [31:0] campfireState;
     campfire cf(
                  .sim_clk(sim_clk),
-                 .reset(BtnD),
+                 .reset(reset),
+                 .initCampfireState(initCampfireState),
                  .campfireState(campfireState)
              );
 
     // Destroyable Block
     destroyable_block db(.sim_clk(sim_clk),
-                         .reset(BtnD),
-                         //  .col(blockCol),
+                         .reset(reset),
+                         .col(blockCol),
                          .initBlockState(initBlockState),
                          .blockState(blockState)
                         );

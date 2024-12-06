@@ -4,6 +4,7 @@ module lizard(
         input sim_clk,
         input reset,
         input [1:0] lizardCol,       // Collision input for lizard
+        input lizardKillCol,
         input [31:0] initLizardState,
         output [31:0] lizardState    // Lizard state output
     );
@@ -48,6 +49,12 @@ module lizard(
                      : xPos + xSpeed - ((xPos + xSpeed) & 31) - 1;
 
                 xDir <= ~xDir;  // Reverse direction
+            end
+
+            if (lizardKillCol) begin
+                xPos <= 0;
+                yPos <= 0;
+                xSpeed <= 0;
             end
         end
     end

@@ -4,9 +4,11 @@ module player(
         input sim_clk,
         input reset,
         input jump_r,
+        input playerKill,
         input [3:0] playerCol,
         input [31:0] initPlayerState,
-        output [31:0] playerState
+        output [31:0] playerState,
+        output reg playerDead
     );
     reg [9:0] xPos, yPos;
     reg [4:0] xSpeed, ySpeed;
@@ -48,6 +50,9 @@ module player(
             ySpeed <= initPlayerState[6:2];
             xDir <= initPlayerState[1];
             yDir <= initPlayerState[0];
+
+            // default not dead
+            playerDead <= 0;
         end
         else begin
             // update positions
@@ -101,6 +106,9 @@ module player(
                     yDir <= down;
                 end
             end
+
+            if (playerKill)
+                playerDead <= 1;
 
         end
     end
